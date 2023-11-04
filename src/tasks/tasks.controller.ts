@@ -1,8 +1,11 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
+  HttpCode,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -27,16 +30,27 @@ export class TasksController {
 
   @Post()
   create(@Body() body: CreateTaskDto) {
-    return this.taskService.create(body);
+    try {
+      return this.taskService.create(body);
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new ConflictException('Task Already Exist');
+      }
+    }
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: UpdateTaskDto) {
-    return this.taskService.update(id, body);
+  async update(@Param('id') id: string, @Body() body: UpdateTaskDto) {
+    const task = await this.taskService.update(id, body);
+    if (!task) throw new NotFoundException('Task Not Found');
+    return task;
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
-    return this.taskService.delete(id);
+  @HttpCode(204)
+  async delete(@Param('id') id: string) {
+    const task = await this.taskService.delete(id);
+    if (!task) throw new NotFoundException('Task not Found');
+    return task;
   }
 }
